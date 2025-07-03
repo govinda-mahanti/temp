@@ -1,85 +1,130 @@
-import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
+import React, { useRef, useState } from 'react';
 import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0);
-  const [mediaFile, setMediaFile] = useState(null);
-  const [previewURL, setPreviewURL] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const animationFrameIdRef = useRef(null);
+  const [recording, setRecording] = useState(false);
+  const [videoURL, setVideoURL] = useState(null);
 
-  const handleMediaChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setMediaFile(file);
-      setPreviewURL(URL.createObjectURL(file));
+  const startRecording = async () => {
+    const constraints = {
+      video: {
+        width: { ideal: 720 },
+        height: { ideal: 1280 },
+        facingMode: 'environment',
+      },
+      audio: true,
+    };
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+
+      const [videoTrack] = stream.getVideoTracks();
+      const { width, height } = await new Promise((resolve) => {
+        const settings = videoTrack.getSettings();
+        if (settings.width && settings.height) {
+          resolve({ width: settings.width, height: settings.height });
+        } else {
+          videoRef.current.onloadedmetadata = () => {
+            resolve({
+              width: videoRef.current.videoWidth,
+              height: videoRef.current.videoHeight,
+            });
+          };
+        }
+      });
+
+      canvas.width = 720;
+      canvas.height = 1280;
+
+      const drawFrame = () => {
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((90 * Math.PI) / 180);
+        ctx.drawImage(videoRef.current, -height / 2, -width / 2, height, width);
+        ctx.restore();
+        animationFrameIdRef.current = requestAnimationFrame(drawFrame);
+      };
+
+      drawFrame();
+
+      const canvasStream = canvas.captureStream(30);
+      const audioTrack = stream.getAudioTracks()[0];
+      canvasStream.addTrack(audioTrack);
+
+      recordedChunksRef.current = [];
+      mediaRecorderRef.current = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setVideoURL(url);
+      };
+
+      mediaRecorderRef.current.start();
+      setRecording(true);
+    } catch (err) {
+      console.error('Error accessing media devices.', err);
     }
   };
 
+  const stopRecording = () => {
+    mediaRecorderRef.current.stop();
+    streamRef.current.getTracks().forEach((track) => track.stop());
+    setRecording(false);
+  };
+
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-
-      <div className="card">
-        <label className="block font-medium mb-2">
-          Capture Photo or Video:
-        </label>
-        <input
-          type="file"
-          accept="image/*,video/*"
-          capture="environment"
-          onChange={handleMediaChange}
-        />
-        {previewURL && (
-          <>
-            {mediaFile?.type?.startsWith('image/') ? (
-              <img
-                src={previewURL}
-                alt="Captured"
-                style={{
-                  width: '100%',
-                  maxWidth: '300px',
-                  borderRadius: '10px',
-                  marginTop: '16px',
-                }}
-              />
-            ) : (
-              <video
-                src={previewURL}
-                controls
-                style={{
-                  width: '100%',
-                  maxWidth: '300px',
-                  borderRadius: '10px',
-                  marginTop: '16px',
-                }}
-              />
-            )}
-          </>
+    <div style={{ textAlign: 'center', padding: '20px' }}>
+      <h2>Portrait Video Recorder (9:16)</h2>
+      <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '360px',
+          height: '640px',
+          borderRadius: '10px',
+          backgroundColor: '#000',
+        }}
+      />
+      <div style={{ marginTop: '12px' }}>
+        {!recording ? (
+          <button onClick={startRecording}>Start Recording</button>
+        ) : (
+          <button onClick={stopRecording}>Stop Recording</button>
         )}
       </div>
-
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      {videoURL && (
+        <div style={{ marginTop: '16px' }}>
+          <video
+            src={videoURL}
+            controls
+            style={{ width: '360px', height: '640px', borderRadius: '10px' }}
+          />
+          <br />
+          <a href={videoURL} download="portrait-video.webm">Download Video</a>
+        </div>
+      )}
+    </div>
   );
 }
 

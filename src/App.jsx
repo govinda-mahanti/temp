@@ -14,8 +14,8 @@ function App() {
   const startRecording = async () => {
     const constraints = {
       video: {
-        width: { ideal: 720 },
-        height: { ideal: 1280 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
         facingMode: 'environment',
       },
       audio: true,
@@ -30,31 +30,39 @@ function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      const [videoTrack] = stream.getVideoTracks();
-      const { width, height } = await new Promise((resolve) => {
-        const settings = videoTrack.getSettings();
-        if (settings.width && settings.height) {
-          resolve({ width: settings.width, height: settings.height });
-        } else {
-          videoRef.current.onloadedmetadata = () => {
-            resolve({
-              width: videoRef.current.videoWidth,
-              height: videoRef.current.videoHeight,
-            });
-          };
-        }
-      });
-
+      // Set canvas to portrait size
       canvas.width = 720;
       canvas.height = 1280;
 
       const drawFrame = () => {
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((90 * Math.PI) / 180);
-        ctx.drawImage(videoRef.current, -height / 2, -width / 2, height, width);
+
+        const video = videoRef.current;
+
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+
+        const videoAspect = videoWidth / videoHeight;
+        const canvasAspect = canvas.width / canvas.height;
+
+        let sx = 0, sy = 0, sWidth = videoWidth, sHeight = videoHeight;
+
+        if (videoAspect > canvasAspect) {
+          // Crop horizontally
+          const newWidth = sHeight * canvasAspect;
+          sx = (sWidth - newWidth) / 2;
+          sWidth = newWidth;
+        } else {
+          // Crop vertically (just in case)
+          const newHeight = sWidth / canvasAspect;
+          sy = (sHeight - newHeight) / 2;
+          sHeight = newHeight;
+        }
+
+        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
         ctx.restore();
+
         animationFrameIdRef.current = requestAnimationFrame(drawFrame);
       };
 

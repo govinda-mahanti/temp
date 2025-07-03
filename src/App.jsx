@@ -30,39 +30,37 @@ function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      // Set canvas to portrait size
-      canvas.width = 720;
-      canvas.height = 1280;
+      // Portrait canvas
+      const canvasWidth = 720;
+      const canvasHeight = 1280;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
 
       const drawFrame = () => {
         ctx.save();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         const video = videoRef.current;
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
 
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
+        // Translate to center, rotate, then draw rotated video into canvas
+        ctx.translate(canvasWidth / 2, canvasHeight / 2);
+        ctx.rotate((90 * Math.PI) / 180);
 
-        const videoAspect = videoWidth / videoHeight;
-        const canvasAspect = canvas.width / canvas.height;
+        const scale = Math.min(canvasHeight / vw, canvasWidth / vh);
+        const drawWidth = vh * scale;
+        const drawHeight = vw * scale;
 
-        let sx = 0, sy = 0, sWidth = videoWidth, sHeight = videoHeight;
+        ctx.drawImage(
+          video,
+          -vw / 2,
+          -vh / 2,
+          vw,
+          vh
+        );
 
-        if (videoAspect > canvasAspect) {
-          // Crop horizontally
-          const newWidth = sHeight * canvasAspect;
-          sx = (sWidth - newWidth) / 2;
-          sWidth = newWidth;
-        } else {
-          // Crop vertically (just in case)
-          const newHeight = sWidth / canvasAspect;
-          sy = (sHeight - newHeight) / 2;
-          sHeight = newHeight;
-        }
-
-        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
         ctx.restore();
-
         animationFrameIdRef.current = requestAnimationFrame(drawFrame);
       };
 
@@ -103,7 +101,7 @@ function App() {
 
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>
-      <h2>Portrait Video Recorder (9:16)</h2>
+      <h2>Portrait Video Recorder (Fixed Rotation)</h2>
       <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
       <canvas
         ref={canvasRef}

@@ -30,10 +30,7 @@ function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      const vw = videoRef.current.videoWidth || 1280;
-      const vh = videoRef.current.videoHeight || 720;
-
-      // Portrait canvas (rotated landscape video will fit here)
+      // Set canvas to portrait size
       canvas.width = 720;
       canvas.height = 1280;
 
@@ -41,23 +38,31 @@ function App() {
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Move origin to center, rotate canvas
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-90 * Math.PI / 180);
+        const video = videoRef.current;
 
-        // Draw the landscape video rotated into the portrait canvas
-        const drawWidth = vh;
-        const drawHeight = vw;
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
 
-        ctx.drawImage(
-          videoRef.current,
-          -drawWidth / 2,
-          -drawHeight / 2,
-          drawWidth,
-          drawHeight
-        );
+        const videoAspect = videoWidth / videoHeight;
+        const canvasAspect = canvas.width / canvas.height;
 
+        let sx = 0, sy = 0, sWidth = videoWidth, sHeight = videoHeight;
+
+        if (videoAspect > canvasAspect) {
+          // Crop horizontally
+          const newWidth = sHeight * canvasAspect;
+          sx = (sWidth - newWidth) / 2;
+          sWidth = newWidth;
+        } else {
+          // Crop vertically (just in case)
+          const newHeight = sWidth / canvasAspect;
+          sy = (sHeight - newHeight) / 2;
+          sHeight = newHeight;
+        }
+
+        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
         ctx.restore();
+
         animationFrameIdRef.current = requestAnimationFrame(drawFrame);
       };
 
@@ -98,7 +103,7 @@ function App() {
 
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>
-      <h2>Portrait Video Recorder (Fixed)</h2>
+      <h2>Portrait Video Recorder (9:16)</h2>
       <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
       <canvas
         ref={canvasRef}

@@ -19,10 +19,10 @@ function App() {
   return (
     <>
       <div>
-        <a href="https://vite.dev" target="_blank">
+        <a href="https://vite.dev" target="_blank" rel="noreferrer">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
-        <a href="https://react.dev" target="_blank">
+        <a href="https://react.dev" target="_blank" rel="noreferrer">
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
@@ -32,11 +32,15 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
-        <p>Edit <code>src/App.jsx</code> and save to test HMR</p>
+        <p>
+          Edit <code>src/App.jsx</code> and save to test HMR
+        </p>
       </div>
 
       <div className="card">
-        <label className="block font-medium mb-2">Capture Photo or Video:</label>
+        <label className="block font-medium mb-2">
+          Capture Photo or Video:
+        </label>
         <input
           type="file"
           accept="image/*,video/*"
@@ -49,13 +53,23 @@ function App() {
               <img
                 src={previewURL}
                 alt="Captured"
-                className="w-full max-w-xs rounded shadow mt-4"
+                style={{
+                  width: '100%',
+                  maxWidth: '300px',
+                  borderRadius: '10px',
+                  marginTop: '16px',
+                }}
               />
             ) : (
               <video
                 src={previewURL}
                 controls
-                className="w-full max-w-xs rounded shadow mt-4"
+                style={{
+                  width: '100%',
+                  maxWidth: '300px',
+                  borderRadius: '10px',
+                  marginTop: '16px',
+                }}
               />
             )}
           </>

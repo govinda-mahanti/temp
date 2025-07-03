@@ -30,34 +30,31 @@ function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      // Portrait canvas
-      const canvasWidth = 720;
-      const canvasHeight = 1280;
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
+      const vw = videoRef.current.videoWidth || 1280;
+      const vh = videoRef.current.videoHeight || 720;
+
+      // Portrait canvas (rotated landscape video will fit here)
+      canvas.width = 720;
+      canvas.height = 1280;
 
       const drawFrame = () => {
         ctx.save();
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const video = videoRef.current;
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
+        // Move origin to center, rotate canvas
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-90 * Math.PI / 180);
 
-        // Translate to center, rotate, then draw rotated video into canvas
-        ctx.translate(canvasWidth / 2, canvasHeight / 2);
-        ctx.rotate((90 * Math.PI) / 180);
-
-        const scale = Math.min(canvasHeight / vw, canvasWidth / vh);
-        const drawWidth = vh * scale;
-        const drawHeight = vw * scale;
+        // Draw the landscape video rotated into the portrait canvas
+        const drawWidth = vh;
+        const drawHeight = vw;
 
         ctx.drawImage(
-          video,
-          -vw / 2,
-          -vh / 2,
-          vw,
-          vh
+          videoRef.current,
+          -drawWidth / 2,
+          -drawHeight / 2,
+          drawWidth,
+          drawHeight
         );
 
         ctx.restore();
@@ -101,7 +98,7 @@ function App() {
 
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>
-      <h2>Portrait Video Recorder (Fixed Rotation)</h2>
+      <h2>Portrait Video Recorder (Fixed)</h2>
       <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
       <canvas
         ref={canvasRef}
